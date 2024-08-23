@@ -1,8 +1,11 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:turn_page_transition/src/const.dart';
 import 'package:turn_page_transition/src/turn_direction.dart';
 import 'package:turn_page_transition/src/turn_page_animation.dart';
-
+import 'dart:async';
+import 'package:flutter/services.dart';
 final _defaultPageController = TurnPageController(initialPage: 0);
 const _defaultThresholdValue = 0.3;
 
@@ -49,13 +52,14 @@ class TurnPageView extends StatefulWidget {
   State<TurnPageView> createState() => _TurnPageViewState();
 }
 
-class _TurnPageViewState extends State<TurnPageView>
-    with TickerProviderStateMixin {
+class _TurnPageViewState extends State<TurnPageView> with TickerProviderStateMixin {
   late final List<Widget> pages;
+  late Future<ui.Image> _textureImageFuture;
 
   @override
   void initState() {
     super.initState();
+    _textureImageFuture = _loadImage('assets/old-book.png');
     widget.controller._animation = TurnAnimationController(
       vsync: this,
       initialPage: widget.controller.initialPage,
@@ -74,17 +78,33 @@ class _TurnPageViewState extends State<TurnPageView>
         return AnimatedBuilder(
           animation: animation,
           child: page,
-          builder: (context, child) => TurnPageAnimation(
-            animation: animation,
-            overleafColor: widget.overleafColorBuilder?.call(pageIndex) ??
-                defaultOverleafColor,
-            animationTransitionPoint: widget.animationTransitionPoint,
-            direction: widget.controller.direction,
-            child: child ?? page,
+          builder: (context, child) => FutureBuilder<ui.Image>(
+            future: _textureImageFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                return TurnPageAnimation(
+                  animation: animation,
+                  texture: snapshot.data!,
+                  direction: widget.controller.direction,
+                  child: child ?? page,
+                );
+              } else {
+                return const CircularProgressIndicator();
+              }
+            },
           ),
         );
       },
     );
+  }
+
+  Future<ui.Image> _loadImage(String assetName) async {
+    final ByteData data = await rootBundle.load(assetName);
+    final Completer<ui.Image> completer = Completer();
+    ui.decodeImageFromList(data.buffer.asUint8List(), (ui.Image img) {
+      completer.complete(img);
+    });
+    return completer.future;
   }
 
   @override
@@ -186,8 +206,7 @@ class TurnPageController extends ChangeNotifier {
     required TapUpDetails details,
     required BoxConstraints constraints,
   }) {
-    final isLeftSideTapped =
-        details.localPosition.dx <= constraints.maxWidth / 2;
+    final isLeftSideTapped = details.localPosition.dx <= constraints.maxWidth / 2;
 
     switch (direction) {
       case TurnDirection.rightToLeft:
@@ -217,8 +236,7 @@ class TurnPageController extends ChangeNotifier {
     if (this._isTurnForward == null) {
       this._isTurnForward = delta >= 0;
     }
-    final isTurnForward =
-        this._isTurnForward != null ? this._isTurnForward! : delta >= 0;
+    final isTurnForward = this._isTurnForward != null ? this._isTurnForward! : delta >= 0;
 
     if (isTurnForward) {
       final currentPageController = _animation.currentPage;
@@ -299,13 +317,11 @@ class TurnAnimationController {
           (index) => AnimationController(
             vsync: vsync,
             duration: duration,
-            value:
-                index < initialPage ? _animationMaxValue : _animationMinValue,
+            value: index < initialPage ? _animationMaxValue : _animationMinValue,
           ),
         );
 
-  AnimationController? get previousPage =>
-      currentIndex > 0 ? _controllers[currentIndex - 1] : null;
+  AnimationController? get previousPage => currentIndex > 0 ? _controllers[currentIndex - 1] : null;
 
   AnimationController? get currentPage =>
       currentIndex < itemCount - 1 ? _controllers[currentIndex] : null;

@@ -1,30 +1,31 @@
+import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:turn_page_transition/src/const.dart';
+import 'package:flutter/services.dart';
 import 'package:turn_page_transition/src/turn_direction.dart';
 
-/// A widget that provides a page-turning animation.
+/// A widget that provides a page-turning animation with texture.
 class TurnPageAnimation extends StatelessWidget {
   TurnPageAnimation({
-    super.key,
+    Key? key,
     required this.animation,
-    required this.overleafColor,
+    required this.texture,
     this.animationTransitionPoint,
     this.direction = TurnDirection.rightToLeft,
     required this.child,
-  }) {
+  }) : super(key: key) {
     final transitionPoint = animationTransitionPoint;
     assert(
-      transitionPoint == null || 0 <= transitionPoint && transitionPoint < 1,
-      'animationTransitionPoint must be 0 <= animationTransitionPoint < 1',
+    transitionPoint == null || 0 <= transitionPoint && transitionPoint < 1,
+    'animationTransitionPoint must be 0 <= animationTransitionPoint < 1',
     );
   }
 
   /// The animation that controls the page-turning effect.
   final Animation<double> animation;
 
-  /// The color of the backside of the pages.
-  /// Default color is [Colors.grey].
-  final Color overleafColor;
+  /// The texture image for the backside of the pages.
+  final ui.Image texture;
 
   /// The point that behavior of the turn-page-animation changes.
   /// This value must be 0 <= animationTransitionPoint < 1.
@@ -38,15 +39,15 @@ class TurnPageAnimation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final transitionPoint = this.animationTransitionPoint ?? defaultAnimationTransitionPoint;
+    final transitionPoint = this.animationTransitionPoint ?? 0.5;
 
     final alignment =
-        direction == TurnDirection.rightToLeft ? Alignment.centerLeft : Alignment.centerRight;
+    direction == TurnDirection.rightToLeft ? Alignment.centerLeft : Alignment.centerRight;
 
     return CustomPaint(
       foregroundPainter: _OverleafPainter(
         animation: animation,
-        color: overleafColor,
+        texture: texture,
         animationTransitionPoint: transitionPoint,
         direction: direction,
       ),
@@ -76,17 +77,10 @@ class _PageTurnClipper extends CustomClipper<Path> {
     this.direction = TurnDirection.leftToRight,
   });
 
-  /// The animation that controls the page-turning effect.
   final Animation<double> animation;
-
-  /// The point at which the page-turning animation behavior changes.
-  /// This value must be between 0 and 1 (0 <= animationTransitionPoint < 1).
   final double animationTransitionPoint;
-
-  /// The direction in which the pages are turned.
   final TurnDirection direction;
 
-  /// Creates the clipping path based on the animation progress and direction.
   @override
   Path getClip(Size size) {
     final width = size.width;
@@ -157,8 +151,8 @@ class _PageTurnClipper extends CustomClipper<Path> {
       final foldLowerCorner = Offset(foldLowerCornerX, height);
 
       path
-        ..lineTo(foldLowerCorner.dx, foldLowerCorner.dy) // BottomLeft
-        ..lineTo(innerBottomCorner.dx, innerBottomCorner.dy) // BottomRight
+        ..lineTo(foldLowerCorner.dx, foldLowerCorner.dy)
+        ..lineTo(innerBottomCorner.dx, innerBottomCorner.dy)
         ..close();
     }
 
@@ -171,26 +165,18 @@ class _PageTurnClipper extends CustomClipper<Path> {
   }
 }
 
-/// CustomPainter that paints the backside of the pages during the animation.
+/// CustomPainter that paints the textured backside of the pages during the animation.
 class _OverleafPainter extends CustomPainter {
   const _OverleafPainter({
     required this.animation,
-    required this.color,
+    required this.texture,
     required this.animationTransitionPoint,
     required this.direction,
   });
 
-  /// The animation that controls the page-turning effect.
   final Animation<double> animation;
-
-  /// The color of the backside of the pages.
-  final Color color;
-
-  /// The point at which the page-turning animation behavior changes.
-  /// This value must be between 0 and 1 (0 <= animationTransitionPoint < 1).
+  final ui.Image texture;
   final double animationTransitionPoint;
-
-  /// The direction in which the pages are turned.
   final TurnDirection direction;
 
   @override
@@ -224,7 +210,6 @@ class _OverleafPainter extends CustomPainter {
 
       final W = turnedXDistance;
       final H = turnedYDistance;
-      // Intersection of the line connecting (W, 0) & (W, H) and perpendicular line.
       final intersectionX = (W * H * H) / (W * W + H * H);
       final intersectionY = (W * W * H) / (W * W + H * H);
 
@@ -250,15 +235,11 @@ class _OverleafPainter extends CustomPainter {
       final progressSubtractedDefault = animationProgress - animationTransitionPoint;
       final turnedBottomWidthRate = horizontalVelocity * progressSubtractedDefault;
 
-      // Alias that converts values to simple characters. -------
       final w2 = width * width;
       final h2 = height * height;
       final q = animationProgress - turnedBottomWidthRate;
       final q2 = q * q;
 
-      // --------------------------------------------------------
-
-      // Page corner position which is line target point of (W, 0) for the line connecting (W, 0) & (W, H).
       final intersectionX = width * h2 * animationProgress / (w2 * q2 + h2);
       final intersectionY = w2 * height * animationProgress * q / (w2 * q2 + h2);
 
@@ -294,15 +275,74 @@ class _OverleafPainter extends CustomPainter {
       path.reset();
     }
 
-    final fillPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..shader = ImageShader(
+        texture,
+        TileMode.repeated,
+        TileMode.repeated,
+        Matrix4.identity().scaled(1 / texture.width, 1 / texture.height).storage,
+      );
 
-    canvas..drawPath(path, fillPaint);
+    canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(_OverleafPainter oldPainter) {
     return true;
+  }
+}
+
+/// A widget that uses TurnPageAnimation to create a book-like page turning effect.
+class TexturedBookPage extends StatefulWidget {
+  const TexturedBookPage({
+    Key? key,
+    required this.child,
+    required this.controller,
+    this.direction = TurnDirection.rightToLeft,
+  }) : super(key: key);
+
+  final Widget child;
+  final AnimationController controller;
+  final TurnDirection direction;
+
+  @override
+  _TexturedBookPageState createState() => _TexturedBookPageState();
+}
+
+class _TexturedBookPageState extends State<TexturedBookPage> {
+  late Future<ui.Image> _textureImageFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _textureImageFuture = _loadImage('assets/old-book.png');
+  }
+
+  Future<ui.Image> _loadImage(String assetName) async {
+    final ByteData data = await rootBundle.load(assetName);
+    final Completer<ui.Image> completer = Completer();
+    ui.decodeImageFromList(data.buffer.asUint8List(), (ui.Image img) {
+      completer.complete(img);
+    });
+    return completer.future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ui.Image>(
+      future: _textureImageFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+          return TurnPageAnimation(
+            animation: widget.controller,
+            texture: snapshot.data!,
+            direction: widget.direction,
+            child: widget.child,
+          );
+        } else {
+          return const CircularProgressIndicator();
+        }
+      },
+    );
   }
 }
