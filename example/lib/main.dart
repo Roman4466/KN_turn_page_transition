@@ -1,5 +1,5 @@
-import 'package:example/routes.dart';
 import 'package:flutter/material.dart';
+import 'package:example/routes.dart';
 import 'package:turn_page_transition/turn_page_transition.dart';
 
 void main() {
@@ -11,8 +11,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final routes = Routes.routes();
-
     return MaterialApp.router(
       title: 'TurnPageTransition Example',
       debugShowCheckedModeBanner: false,
@@ -23,8 +21,7 @@ class MyApp extends StatelessWidget {
         ),
         primarySwatch: Colors.blue,
       ),
-      routeInformationParser: routes.routeInformationParser,
-      routerDelegate: routes.routerDelegate,
+      routerConfig: Routes.routerConfig(),
     );
   }
 }

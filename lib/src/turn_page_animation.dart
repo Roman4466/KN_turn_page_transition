@@ -38,12 +38,10 @@ class TurnPageAnimation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final transitionPoint =
-        this.animationTransitionPoint ?? defaultAnimationTransitionPoint;
+    final transitionPoint = this.animationTransitionPoint ?? defaultAnimationTransitionPoint;
 
-    final alignment = direction == TurnDirection.rightToLeft
-        ? Alignment.centerLeft
-        : Alignment.centerRight;
+    final alignment =
+        direction == TurnDirection.rightToLeft ? Alignment.centerLeft : Alignment.centerRight;
 
     return CustomPaint(
       foregroundPainter: _OverleafPainter(
@@ -143,11 +141,9 @@ class _PageTurnClipper extends CustomClipper<Path> {
         ..lineTo(innerBottomCorner.dx, innerBottomCorner.dy)
         ..close();
     } else {
-      final progressSubtractedDefault =
-          animationProgress - animationTransitionPoint;
+      final progressSubtractedDefault = animationProgress - animationTransitionPoint;
       final horizontalVelocity = 1 / (1 - animationTransitionPoint);
-      final turnedBottomWidth =
-          width * progressSubtractedDefault * horizontalVelocity;
+      final turnedBottomWidth = width * progressSubtractedDefault * horizontalVelocity;
 
       switch (direction) {
         case TurnDirection.rightToLeft:
@@ -251,10 +247,8 @@ class _OverleafPainter extends CustomPainter {
         ..close();
     } else if (animationProgress < 1) {
       final horizontalVelocity = 1 / (1 - animationTransitionPoint);
-      final progressSubtractedDefault =
-          animationProgress - animationTransitionPoint;
-      final turnedBottomWidthRate =
-          horizontalVelocity * progressSubtractedDefault;
+      final progressSubtractedDefault = animationProgress - animationTransitionPoint;
+      final turnedBottomWidthRate = horizontalVelocity * progressSubtractedDefault;
 
       // Alias that converts values to simple characters. -------
       final w2 = width * width;
@@ -266,14 +260,11 @@ class _OverleafPainter extends CustomPainter {
 
       // Page corner position which is line target point of (W, 0) for the line connecting (W, 0) & (W, H).
       final intersectionX = width * h2 * animationProgress / (w2 * q2 + h2);
-      final intersectionY =
-          w2 * height * animationProgress * q / (w2 * q2 + h2);
+      final intersectionY = w2 * height * animationProgress * q / (w2 * q2 + h2);
 
-      final intersectionCorrection =
-          (animationProgress - q) / animationProgress;
+      final intersectionCorrection = (animationProgress - q) / animationProgress;
 
-      final turnedBottomWidth =
-          width * progressSubtractedDefault * horizontalVelocity;
+      final turnedBottomWidth = width * progressSubtractedDefault * horizontalVelocity;
 
       switch (direction) {
         case TurnDirection.rightToLeft:
@@ -307,14 +298,7 @@ class _OverleafPainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    final linePaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    canvas
-      ..drawPath(path, fillPaint)
-      ..drawPath(path, linePaint);
+    canvas..drawPath(path, fillPaint);
   }
 
   @override
