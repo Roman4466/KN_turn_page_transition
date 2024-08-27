@@ -42,18 +42,19 @@ class TurnPageTransitionsTheme extends PageTransitionsTheme {
   final TurnDirection direction;
 
   PageTransitionsBuilder get _builder => TurnPageTransitionsBuilder(
-        animationTransitionPoint: animationTransitionPoint ?? turningPoint,
-        direction: direction, textureAsset: 'assets/old-book.png',
-      );
+    overleafColor: overleafColor,
+    animationTransitionPoint: animationTransitionPoint ?? turningPoint,
+    direction: direction,
+  );
 
   @override
   Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
+      PageRoute<T> route,
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
     return _builder.buildTransitions(
       route,
       context,
