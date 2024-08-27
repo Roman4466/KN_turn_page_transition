@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:turn_page_transition/src/const.dart';
 import 'package:turn_page_transition/src/turn_direction.dart';
 import 'package:turn_page_transition/src/turn_page_animation.dart';
-import 'dart:async';
-import 'package:flutter/services.dart';
+
 final _defaultPageController = TurnPageController(initialPage: 0);
 const _defaultThresholdValue = 0.3;
 
@@ -53,48 +54,59 @@ class TurnPageView extends StatefulWidget {
 }
 
 class _TurnPageViewState extends State<TurnPageView> with TickerProviderStateMixin {
-  late final List<Widget> pages;
-  late Future<ui.Image> _textureImageFuture;
+  List<Widget> pages = [Container()];
+  ui.Image? _textureImage;
 
   @override
   void initState() {
     super.initState();
-    _textureImageFuture = _loadImage('assets/old-book.png');
+    _loadImage('assets/old-book.png').then((value) {
+      _textureImage = value;
+      pages = List.generate(
+        widget.itemCount,
+        (index) {
+          final pageIndex = (widget.itemCount - 1) - index;
+          final animation = widget.controller._animation._controllers[pageIndex];
+          final page = widget.itemBuilder(context, pageIndex);
+          return AnimatedBuilder(
+            animation: animation,
+            child: page,
+            builder: (context, child) => TurnPageAnimation(
+              animation: animation,
+              texture: value,
+              direction: widget.controller.direction,
+              child: child ?? page,
+            ),
+          );
+          // return FutureBuilder<ui.Image>(
+          //   future: _textureImageFuture,
+          //   builder: (context, snapshot) {
+          //     if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+          //       return AnimatedBuilder(
+          //         animation: animation,
+          //         child: page,
+          //         builder: (context, child) => TurnPageAnimation(
+          //           animation: animation,
+          //           texture: snapshot.data!,
+          //           direction: widget.controller.direction,
+          //           child: child ?? page,
+          //         ),
+          //       );
+          //     } else {
+          //       return const CircularProgressIndicator();
+          //     }
+          //   },
+          // );
+        },
+      );
+    });
+    setState(() {});
     widget.controller._animation = TurnAnimationController(
       vsync: this,
       initialPage: widget.controller.initialPage,
       itemCount: widget.itemCount,
       thresholdValue: widget.controller.thresholdValue,
       duration: widget.controller.duration,
-    );
-
-    pages = List.generate(
-      widget.itemCount,
-      (index) {
-        final pageIndex = (widget.itemCount - 1) - index;
-        final animation = widget.controller._animation._controllers[pageIndex];
-        final page = widget.itemBuilder(context, pageIndex);
-
-        return AnimatedBuilder(
-          animation: animation,
-          child: page,
-          builder: (context, child) => FutureBuilder<ui.Image>(
-            future: _textureImageFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                return TurnPageAnimation(
-                  animation: animation,
-                  texture: snapshot.data!,
-                  direction: widget.controller.direction,
-                  child: child ?? page,
-                );
-              } else {
-                return const CircularProgressIndicator();
-              }
-            },
-          ),
-        );
-      },
     );
   }
 
